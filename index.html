@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <title>Data Produk (Firebase + Auth)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <style>
     body { font-family: Arial; padding: 20px; }
     input, button { margin: 3px; padding: 5px; font-size: 13px; }
@@ -92,14 +92,14 @@
 <script>
   // === Firebase Init ===
   const firebaseConfig = {
-  apiKey: "AIzaSyAEb254RV2xncyZwnh0RUfqrnSTOPSpw2E",
-  authDomain: "strata-dc0dc.firebaseapp.com",
-  projectId: "strata-dc0dc",
-  storageBucket: "strata-dc0dc.firebasestorage.app",
-  messagingSenderId: "515862931689",
-  appId: "1:515862931689:web:56ab94adf03254aa622878",
-  measurementId: "G-0LC4S8SKBJ"
-};
+    apiKey: "AIzaSyAEb254RV2xncyZwnh0RUfqrnSTOPSpw2E",
+    authDomain: "strata-dc0dc.firebaseapp.com",
+    projectId: "strata-dc0dc",
+    storageBucket: "strata-dc0dc.firebasestorage.app",
+    messagingSenderId: "515862931689",
+    appId: "1:515862931689:web:56ab94adf03254aa622878",
+    measurementId: "G-0LC4S8SKBJ"
+  };
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
