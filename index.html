@@ -104,8 +104,8 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  const adminEmail = "mnu@smg.com"; // admin tetap
-  let currentUserRole = "user"; // default
+  const adminEmail = "mnu@smg.com";
+  let currentUserRole = "user";
 
   let data = [];
 
@@ -134,7 +134,6 @@
       currentUserRole = (user.email === adminEmail) ? "admin" : "user";
       document.getElementById("userRole").textContent = "Login sebagai: " + currentUserRole;
 
-      // show/hide fitur admin
       document.getElementById("form").style.display = (currentUserRole === "admin") ? "block" : "none";
       document.getElementById("btnExport").style.display = (currentUserRole === "admin") ? "inline-block" : "none";
       document.getElementById("importExcel").style.display = (currentUserRole === "admin") ? "inline-block" : "none";
@@ -154,7 +153,6 @@
     if (editId) {
       await db.collection("produkData").doc(editId).set(row);
     } else {
-      // cek duplikat
       const snapshot = await db.collection("produkData")
         .where("periode", "==", row.periode)
         .where("id", "==", row.id)
@@ -163,7 +161,7 @@
         .where("motif", "==", row.motif)
         .get();
       if (!snapshot.empty) {
-        alert("❗ Duplikat ditemukan (periode + id + merk + ukuran + motif).");
+        alert("❗ Duplikat ditemukan.");
         return;
       }
       await db.collection("produkData").add(row);
@@ -261,16 +259,24 @@
     });
   }
 
-  // === Export / Import Excel ===
+  // === Export Excel ===
   function exportToExcel() {
     if (currentUserRole !== "admin") return;
-    const exportData = data.map(({ _id, ...rest }) => rest);
+    let exportData = data.map(({ _id, ...rest }) => rest);
+    if (exportData.length === 0) {
+      exportData = [{
+        periode: "", id: "", kelompok: "", merk: "", ukuran: "", motif: "",
+        plRetail: "", plPareto: "", kr100: "", kr100_300: "", kr300: "",
+        as100: "", as100_300: "", as300: "", pt500: "", pt1000: ""
+      }];
+    }
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Produk");
     XLSX.writeFile(wb, "DataProduk.xlsx");
   }
 
+  // === Import Excel dengan debug ===
   async function importExcel(e) {
     if (currentUserRole !== "admin") return;
     const reader = new FileReader();
@@ -279,24 +285,30 @@
       const ws = wb.Sheets[wb.SheetNames[0]];
       const imported = XLSX.utils.sheet_to_json(ws);
 
-      let ditambahkan = 0, duplikat = 0;
+      let ditambahkan = 0, duplikat = 0, gagal = 0;
       for (const row of imported) {
-        const snapshot = await db.collection("produkData")
-          .where("periode", "==", row.periode)
-          .where("id", "==", row.id)
-          .where("merk", "==", row.merk)
-          .where("ukuran", "==", row.ukuran)
-          .where("motif", "==", row.motif)
-          .get();
-        if (snapshot.empty) {
-          await db.collection("produkData").add(row);
-          ditambahkan++;
-        } else {
-          duplikat++;
+        try {
+          console.log("Coba simpan:", row);
+          const snapshot = await db.collection("produkData")
+            .where("periode", "==", row.periode)
+            .where("id", "==", row.id)
+            .where("merk", "==", row.merk)
+            .where("ukuran", "==", row.ukuran)
+            .where("motif", "==", row.motif)
+            .get();
+          if (snapshot.empty) {
+            await db.collection("produkData").add(row);
+            ditambahkan++;
+          } else {
+            duplikat++;
+          }
+        } catch (err) {
+          console.error("Gagal simpan:", err);
+          gagal++;
         }
       }
       document.getElementById("log").textContent =
-        `✅ Import selesai: ${ditambahkan} data ditambahkan, ${duplikat} duplikat diabaikan.`;
+        `✅ Import selesai: ${ditambahkan} ditambahkan, ${duplikat} duplikat, ${gagal} gagal.`;
     };
     reader.readAsBinaryString(e.target.files[0]);
   }
