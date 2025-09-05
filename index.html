@@ -106,7 +106,6 @@
 
   const adminEmail = "mnu@smg.com";
   let currentUserRole = "user";
-
   let data = [];
 
   function formatAngka(angka) {
@@ -276,7 +275,7 @@
     XLSX.writeFile(wb, "DataProduk.xlsx");
   }
 
-  // === Import Excel dengan debug ===
+  // === Import Excel dengan normalisasi periode + trim ===
   async function importExcel(e) {
     if (currentUserRole !== "admin") return;
     const reader = new FileReader();
@@ -286,9 +285,19 @@
       const imported = XLSX.utils.sheet_to_json(ws);
 
       let ditambahkan = 0, duplikat = 0, gagal = 0;
-      for (const row of imported) {
+      for (let row of imported) {
         try {
+          // Normalisasi periode (yyyy-mm saja)
+          if (row.periode) {
+            row.periode = row.periode.toString().substring(0,7).trim();
+          }
+          if (row.id) row.id = row.id.toString().trim();
+          if (row.merk) row.merk = row.merk.toString().trim();
+          if (row.ukuran) row.ukuran = row.ukuran.toString().trim();
+          if (row.motif) row.motif = row.motif.toString().trim();
+
           console.log("Coba simpan:", row);
+
           const snapshot = await db.collection("produkData")
             .where("periode", "==", row.periode)
             .where("id", "==", row.id)
@@ -296,6 +305,7 @@
             .where("ukuran", "==", row.ukuran)
             .where("motif", "==", row.motif)
             .get();
+
           if (snapshot.empty) {
             await db.collection("produkData").add(row);
             ditambahkan++;
