@@ -118,46 +118,44 @@
 
   // === Login/Logout ===
   function login() {
-    const email = document.getElementById("loginEmail").value;
-    const pass = document.getElementById("loginPassword").value;
+    const email = loginEmail.value;
+    const pass = loginPassword.value;
     auth.signInWithEmailAndPassword(email, pass)
-      .then(() => { document.getElementById("loginMsg").textContent = ""; })
-      .catch(err => { document.getElementById("loginMsg").textContent = "Login gagal: " + err.message; });
+      .then(() => { loginMsg.textContent = ""; })
+      .catch(err => { loginMsg.textContent = "Login gagal: " + err.message; });
   }
   function logout() { auth.signOut(); }
 
   auth.onAuthStateChanged(user => {
     if (user) {
-      document.getElementById("loginDiv").style.display = "none";
-      document.getElementById("app").style.display = "block";
+      loginDiv.style.display = "none";
+      app.style.display = "block";
       currentUserRole = (user.email === adminEmail) ? "admin" : "user";
-      document.getElementById("userRole").textContent = "Login sebagai: " + currentUserRole;
-      document.getElementById("form").style.display = (currentUserRole === "admin") ? "block" : "none";
-      document.getElementById("btnExport").style.display = (currentUserRole === "admin") ? "inline-block" : "none";
-      document.getElementById("importExcel").style.display = (currentUserRole === "admin") ? "inline-block" : "none";
+      userRole.textContent = "Login sebagai: " + currentUserRole;
+      form.style.display = (currentUserRole === "admin") ? "block" : "none";
+      btnExport.style.display = (currentUserRole === "admin") ? "inline-block" : "none";
+      importExcel.style.display = (currentUserRole === "admin") ? "inline-block" : "none";
     } else {
-      document.getElementById("loginDiv").style.display = "block";
-      document.getElementById("app").style.display = "none";
+      loginDiv.style.display = "block";
+      app.style.display = "none";
     }
   });
 
   // === CRUD ===
-  document.getElementById("form").onsubmit = async function(e) {
+  form.onsubmit = async e => {
     e.preventDefault();
     if (currentUserRole !== "admin") return;
     const row = getFormData();
-    const editId = form.editId.value;
-    if (editId) {
-      await db.collection("produkData").doc(editId).set(row);
+    if (form.editId.value) {
+      await db.collection("produkData").doc(form.editId.value).set(row);
     } else {
-      const snapshot = await db.collection("produkData")
-        .where("periode", "==", row.periode)
-        .where("id", "==", row.id)
-        .where("merk", "==", row.merk)
-        .where("ukuran", "==", row.ukuran)
-        .where("motif", "==", row.motif)
-        .get();
-      if (!snapshot.empty) { alert("❗ Duplikat ditemukan."); return; }
+      const snap = await db.collection("produkData")
+        .where("periode","==",row.periode)
+        .where("id","==",row.id)
+        .where("merk","==",row.merk)
+        .where("ukuran","==",row.ukuran)
+        .where("motif","==",row.motif).get();
+      if (!snap.empty) { alert("❗ Duplikat ditemukan."); return; }
       await db.collection("produkData").add(row);
     }
     resetForm();
@@ -192,28 +190,23 @@
   function resetForm() { form.reset(); form.editId.value = ""; }
 
   // === Realtime Render ===
-  db.collection("produkData").onSnapshot(snapshot => {
-    data = []; snapshot.forEach(doc => { data.push({ ...doc.data(), _id: doc.id }); });
+  db.collection("produkData").onSnapshot(snap => {
+    data = []; snap.forEach(doc => data.push({...doc.data(), _id:doc.id}));
     renderTable();
   });
 
   function renderTable() {
-    const tbody = document.getElementById("tableBody"); tbody.innerHTML = "";
-    const fPeriode = filterPeriode.value, fMotif = filterMotif.value.toLowerCase(),
-          fID = filterID.value.toLowerCase(), fMerk = filterMerk.value.toLowerCase(),
-          fUkuran = filterUkuran.value.toLowerCase();
-
-    data.forEach(d => {
-      const match = (!fPeriode || d.periode.startsWith(fPeriode)) &&
-                    (!fMotif || d.motif.toLowerCase().includes(fMotif)) &&
-                    (!fID || d.id.toLowerCase().includes(fID)) &&
-                    (!fMerk || d.merk.toLowerCase().includes(fMerk)) &&
-                    (!fUkuran || d.ukuran.toLowerCase().includes(fUkuran));
-      if (match) {
-        const aksi = (currentUserRole === "admin") ? 
-          `<button onclick="editData('${d._id}')">Edit</button>
-           <button onclick="hapusData('${d._id}')">Hapus</button>` : "-";
-        tbody.insertAdjacentHTML("beforeend", `
+    tableBody.innerHTML = "";
+    const fP=filterPeriode.value,fM=filterMotif.value.toLowerCase(),
+          fID=filterID.value.toLowerCase(),fMerk=filterMerk.value.toLowerCase(),
+          fU=filterUkuran.value.toLowerCase();
+    data.forEach(d=>{
+      const match=(!fP||d.periode.startsWith(fP))&&(!fM||d.motif.toLowerCase().includes(fM))&&
+                  (!fID||d.id.toLowerCase().includes(fID))&&(!fMerk||d.merk.toLowerCase().includes(fMerk))&&
+                  (!fU||d.ukuran.toLowerCase().includes(fU));
+      if(match){
+        const aksi=(currentUserRole==="admin")?`<button onclick="editData('${d._id}')">Edit</button><button onclick="hapusData('${d._id}')">Hapus</button>`:"-";
+        tableBody.insertAdjacentHTML("beforeend",`
           <tr>
             <td>${d.periode}</td><td>${d.id}</td><td>${d.kelompok}</td><td>${d.merk}</td><td>${d.ukuran}</td><td>${d.motif}</td>
             <td>${d.plRetail}</td><td>${d.plPareto}</td><td>${d.kr100}</td><td>${d.kr100_300}</td><td>${d.kr300}</td>
@@ -224,40 +217,40 @@
     });
   }
 
-  // === Export Excel urut sesuai template ===
+  // === Export Excel sesuai urutan tabel web ===
   function exportToExcel() {
     if (currentUserRole !== "admin") return;
-    const headers = ["periode","id","kelompok","merk","ukuran","motif","plRetail","plPareto","kr100","kr100_300","kr300","as100","as100_300","as300","pt500","pt1000"];
-    let exportData = data.map(({ _id, ...rest }) => rest);
-    if (exportData.length === 0) exportData = [Object.fromEntries(headers.map(h => [h,""]))];
-    const ordered = exportData.map(r => { const o={}; headers.forEach(h=>o[h]=r[h]||""); return o; });
-    const ws = XLSX.utils.json_to_sheet(ordered,{header:headers});
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Produk"); XLSX.writeFile(wb,"DataProduk.xlsx");
+    const headers = Array.from(document.querySelectorAll("thead th")).map(th=>th.innerText).filter(h=>h!=="Aksi");
+    const ordered = data.map(d=>({
+      "Periode":d.periode,"ID":d.id,"Kelompok":d.kelompok,"Merk":d.merk,"Ukuran":d.ukuran,"Motif":d.motif,
+      "PL Retail":d.plRetail,"PL Pareto":d.plPareto,"Kirim <100":d.kr100,"Kirim 100–300":d.kr100_300,"Kirim >300":d.kr300,
+      "Ambil <100":d.as100,"Ambil 100–300":d.as100_300,"Ambil >300":d.as300,"Pareto 500–1000":d.pt500,"Pareto >1000":d.pt1000
+    }));
+    const exportData = ordered.length>0?ordered:[Object.fromEntries(headers.map(h=>[h,""]))];
+    const ws=XLSX.utils.json_to_sheet(exportData,{header:headers});
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Produk");XLSX.writeFile(wb,"DataProduk.xlsx");
   }
 
   // === Import Excel normalisasi periode ===
   async function importExcel(e) {
-    const reader = new FileReader();
-    reader.onload = async evt => {
-      const wb = XLSX.read(evt.target.result,{type:"binary"});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const imported = XLSX.utils.sheet_to_json(ws);
-      let ditambah=0, duplikat=0, gagal=0;
-      for (let row of imported) {
-        try {
-          if (row.periode) row.periode=row.periode.toString().substring(0,7).trim();
-          if (row.id) row.id=row.id.toString().trim();
-          if (row.merk) row.merk=row.merk.toString().trim();
-          if (row.ukuran) row.ukuran=row.ukuran.toString().trim();
-          if (row.motif) row.motif=row.motif.toString().trim();
+    const reader=new FileReader();
+    reader.onload=async evt=>{
+      const wb=XLSX.read(evt.target.result,{type:"binary"});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const imported=XLSX.utils.sheet_to_json(ws);
+      let add=0,dup=0,fail=0;
+      for(let r of imported){
+        try{
+          if(r.periode)r.periode=r.periode.toString().substring(0,7).trim();
+          ["id","merk","ukuran","motif"].forEach(k=>{if(r[k])r[k]=r[k].toString().trim();});
           const snap=await db.collection("produkData")
-            .where("periode","==",row.periode).where("id","==",row.id)
-            .where("merk","==",row.merk).where("ukuran","==",row.ukuran)
-            .where("motif","==",row.motif).get();
-          if (snap.empty) { await db.collection("produkData").add(row); ditambah++; } else { duplikat++; }
-        } catch(err){ console.error("Gagal:",err); gagal++; }
+            .where("periode","==",r.periode).where("id","==",r.id)
+            .where("merk","==",r.merk).where("ukuran","==",r.ukuran)
+            .where("motif","==",r.motif).get();
+          if(snap.empty){await db.collection("produkData").add(r);add++;}else{dup++;}
+        }catch(err){console.error("Gagal:",err);fail++;}
       }
-      log.textContent=`✅ Import selesai: ${ditambah} ditambahkan, ${duplikat} duplikat, ${gagal} gagal.`;
+      log.textContent=`✅ Import selesai: ${add} ditambahkan, ${dup} duplikat, ${fail} gagal.`;
     };
     reader.readAsBinaryString(e.target.files[0]);
   }
